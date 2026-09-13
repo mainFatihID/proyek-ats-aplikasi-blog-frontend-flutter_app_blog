@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
-
-import 'dart:convert';
+import '../models/post_model.dart';
+import '../services/api_services.dart';
+import 'add_post_page.dart';
+import 'add_category_page.dart';
+import 'detail_post_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,67 +13,132 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  List posts = [];
-  bool isLoading = true;
-
-  Future<void> getCategories() async {
-    final response = await http.get(
-      Uri.parse('http://localhost:3000/api/posts/db_app_blog'),
-    );
-
-    if (response.statusCode == 200) {
-      setState(() {
-        posts = jsonDecode(response.body);
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
+  late Future<List<PostModel>> _postsFuture;
 
   @override
   void initState() {
-    // TODO: implement activate
     super.initState();
-    getCategories();
+    _fetchPosts();
+  }
+
+  // Function to refresh posts data from API
+  void _fetchPosts() {
+    setState(() {
+      _postsFuture = ApiServices().getPosts();
+    });
+  }
+
+  // Navigate to AddPostPage and refresh if successfully created
+  Future<void> _navigateToAddPost() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddPostPage(),
+      ),
+    );
+
+    if (result == true) {
+      _fetchPosts();
+    }
+  }
+
+  // Navigate to AddCategoryPage and refresh if needed
+  Future<void> _navigateToAddCategory() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddCategoryPage(),
+      ),
+    );
+
+    if (result == true) {
+      _fetchPosts();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Blog Posts')
-      ),
-      body: isLoading
-        ? Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                CircularProgressIndicator(
-                  color: Colors.blueAccent,
-                  strokeWidth: 3,
-                ),
-                SizedBox(height: 12,),
-                Text('Mengambil data artikel...')
-              ]
+        title: const Text('Blog Posts'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.category_outlined),
+            tooltip: 'Add Category',
+            onPressed: _navigateToAddCategory,
           ),
-        )
-        : posts.isEmpty
-          ? const Center(child: Text('Tidak ada post'))
-          : ListView.builder(
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+            onPressed: _fetchPosts,
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<PostModel>>(
+        future: _postsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Failed to fetch posts from server!',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _fetchPosts,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(
+              child: Text('No blog posts available.'),
+            );
+          }
+
+          final posts = snapshot.data!;
+          return RefreshIndicator(
+            onRefresh: () async => _fetchPosts(),
+            child: ListView.builder(
               itemCount: posts.length,
               itemBuilder: (context, index) {
                 final post = posts[index];
                 return ListTile(
                   leading: const Icon(Icons.article),
-                  title: Text(post['post_title'] ?? 'Tanpa Judul'),
-                  subtitle: Text('Kategori ID: ${post['category_id']}'),
+                  title: Text(post.postTitle),
+                  subtitle: Text('Category ID: ${post.categoryId}'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    // Navigate to detail page and wait for result (e.g. if post was edited or deleted)
+                    final shouldRefresh = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailPostPage(post: post),
+                      ),
+                    );
+
+                    // Refresh list if an item was updated/deleted
+                    if (shouldRefresh == true) {
+                      _fetchPosts();
+                    }
+                  },
                 );
               },
             ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _navigateToAddPost,
+        tooltip: 'Add New Article',
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
- 

@@ -56,6 +56,30 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Helper widget untuk item postingan agar tidak duplikasi kode
+  Widget _buildPostItem(PostModel post) {
+    return ListTile(
+      leading: const Icon(Icons.article),
+      title: Text(post.postTitle),
+      subtitle: Text('Category ID: ${post.categoryId}'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () async {
+        // Navigate to detail page and wait for result
+        final shouldRefresh = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailPostPage(post: post),
+          ),
+        );
+
+        // Refresh list if an item was updated/deleted
+        if (shouldRefresh == true) {
+          _fetchPosts();
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,28 +129,36 @@ class _HomePageState extends State<HomePage> {
           final posts = snapshot.data!;
           return RefreshIndicator(
             onRefresh: () async => _fetchPosts(),
-            child: ListView.builder(
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return ListTile(
-                  leading: const Icon(Icons.article),
-                  title: Text(post.postTitle),
-                  subtitle: Text('Category ID: ${post.categoryId}'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () async {
-                    // Navigate to detail page and wait for result (e.g. if post was edited or deleted)
-                    final shouldRefresh = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailPostPage(post: post),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Tampilan Mobile (Lebar < 600dp)
+                if (constraints.maxWidth < 600) {
+                  return ListView.builder(
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      return _buildPostItem(posts[index]);
+                    },
+                  );
+                }
+
+                // Tampilan Web / Tablet / Desktop (Lebar >= 600dp)
+                int crossAxisCount = constraints.maxWidth >= 900 ? 3 : 2;
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: 3.5,
+                    crossAxisSpacing: 8.0,
+                    mainAxisSpacing: 8.0,
+                  ),
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    return Card(
+                      child: Center(
+                        child: _buildPostItem(posts[index]),
                       ),
                     );
-
-                    // Refresh list if an item was updated/deleted
-                    if (shouldRefresh == true) {
-                      _fetchPosts();
-                    }
                   },
                 );
               },

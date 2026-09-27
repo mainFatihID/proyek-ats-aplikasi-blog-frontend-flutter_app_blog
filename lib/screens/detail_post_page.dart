@@ -109,38 +109,51 @@ class _DetailPostPageState extends State<DetailPostPage> {
       ),
       body: _isDeleting
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.post.postTitle.isEmpty
-                        ? "Untitled"
-                        : widget.post.postTitle,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: 800, // Membatasi lebar konten di layar web/desktop
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.post.postTitle.isEmpty
+                                ? "Untitled"
+                                : widget.post.postTitle,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Chip(
+                            avatar: const Icon(Icons.category, size: 16),
+                            label:
+                                Text('Category ID: ${widget.post.categoryId}'),
+                            backgroundColor:
+                                Colors.blueAccent.withOpacity(0.1),
+                          ),
+                          const Divider(height: 32, thickness: 1),
+                          Text(
+                            widget.post.postContent.isEmpty
+                                ? 'No article content yet.'
+                                : widget.post.postContent,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              height: 1.6,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Chip(
-                    avatar: const Icon(Icons.category, size: 16),
-                    label: Text('Category ID: ${widget.post.categoryId}'),
-                    backgroundColor: Colors.blueAccent.withOpacity(0.1),
-                  ),
-                  const Divider(height: 32, thickness: 1),
-                  Text(
-                    widget.post.postContent.isEmpty
-                        ? 'No article content yet.'
-                        : widget.post.postContent,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
     );
   }

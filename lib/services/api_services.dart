@@ -1,12 +1,18 @@
 import 'dart:convert';
 
-import 'package:get/get.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/post_model.dart';
 
 class ApiServices {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000/api';
+    } else {
+      return 'http://10.0.2.2:3000/api';
+    }
+  }
 
   Future<List<PostModel>> getPosts() async {
     final response = await http.get(Uri.parse('$baseUrl/posts/db_app_blog'));
@@ -22,21 +28,23 @@ class ApiServices {
   }
 
   Future<List<Map<String, dynamic>>> getCategories() async {
-  try {
-    final response = await http.get(Uri.parse('$baseUrl/categories/db_app_blog'));
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/categories/db_app_blog'),
+      );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> body = jsonDecode(response.body);
-      final List<dynamic> categoriesData = body['data'] ?? [];
-      return List<Map<String, dynamic>>.from(categoriesData);
-    } else {
-      throw Exception('Failed to fetch categories from server');
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        final List<dynamic> categoriesData = body['data'] ?? [];
+        return List<Map<String, dynamic>>.from(categoriesData);
+      } else {
+        throw Exception('Failed to fetch categories from server');
+      }
+    } catch (e) {
+      print('GET Categories Exception Error: $e');
+      return [];
     }
-  } catch (e) {
-    print('GET Categories Exception Error: $e');
-    return [];
   }
-}
 
   Future<bool> createPost({
     required String categoryId,
@@ -81,7 +89,7 @@ class ApiServices {
           'category_id': categoryId,
           'category_name': categoryName,
           'category_description': categoryDescription,
-        })
+        }),
       );
 
       print('POST Category Status Code: ${response.statusCode}');
@@ -135,5 +143,4 @@ class ApiServices {
       return false;
     }
   }
-  
 }
